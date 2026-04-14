@@ -334,7 +334,6 @@
           <label class="form-label">상담 결과</label>
           <select class="form-select" id="modalConsultResult">
             <option value="보류" selected>보류</option>
-            <option value="미등록">미등록</option>
             <option value="등록">등록</option>
           </select>
         </div>
@@ -410,7 +409,7 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="App.closeModal('registerModal')">취소</button>
-        <button class="btn btn-success btn-lg" onclick="App.registerStudent()">✅ 등록 완료</button>
+        <button class="btn btn-success btn-lg" id="regSubmitBtn" onclick="App.registerStudent()">✅ 등록 완료</button>
       </div>
     </div>
   </div>

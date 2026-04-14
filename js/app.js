@@ -496,11 +496,13 @@ const App = {
             <button class="btn-action" onclick="App.openConsultComplete('${c.id}')" title="상담 기록/수정">
               <span class="icon">✏️</span> 수정
             </button>
-            <button class="btn-action" onclick="App.viewReportByConsultation('${c.id}')" title="보고서 보기">
-              <span class="icon">📄</span> 보고서
-            </button>
-            ${['보류', '미등록', '등록대기'].includes(c.status) ? `
-              <button class="btn btn-sm btn-success" onclick="App.openRegisterModal('${c.id}')" style="padding: 4px 8px; font-size: 11px;">등록</button>
+            ${c.status !== '예약됨' ? `
+              <button class="btn-action" onclick="App.viewReportByConsultation('${c.id}')" title="보고서 보기">
+                <span class="icon">📄</span> 보고서
+              </button>
+            ` : ''}
+            ${['보류', '등록대기'].includes(c.status) ? `
+              <button class="btn btn-sm btn-success" onclick="App.openRegisterModal('${c.id}', '등록')" style="padding: 4px 8px; font-size: 11px;">등록</button>
             ` : ''}
             <button class="btn-action" onclick="App.deleteConsultation('${c.id}')" style="color:var(--danger);" title="삭제">🗑️</button>
           </div>
@@ -525,12 +527,19 @@ const App = {
     const result = document.getElementById('modalConsultResult').value;
 
     if (result === '등록') {
-      // 등록을 선택한 경우, 상담 기록을 일단 '등록대기' 상태로 저장하고 바로 학생 등록창을 띄움
+      // 등록을 선택한 경우
       Store.updateConsultation(id, { consultNote: note, status: '등록대기' });
       this.closeModal('consultCompleteModal');
       this.renderConsultations();
       this.updateBadges();
-      this.openRegisterModal(id);
+      this.openRegisterModal(id, '등록');
+    } else if (result === '보류') {
+      // 보류를 선택한 경우에도 등록 창을 열어 정보를 더 입력할 수 있게 함
+      Store.updateConsultation(id, { consultNote: note, status: '보류' });
+      this.closeModal('consultCompleteModal');
+      this.renderConsultations();
+      this.updateBadges();
+      this.openRegisterModal(id, '보류');
     } else {
       Store.updateConsultation(id, { consultNote: note, status: result });
       this.closeModal('consultCompleteModal');
@@ -550,9 +559,20 @@ const App = {
   },
 
   // --- Registration ---
-  openRegisterModal(consultId) {
+  openRegisterModal(consultId, type = '등록') {
     const c = Store.getConsultation(consultId);
     if (!c) return;
+
+    this.currentRegType = type; // 상태 저장
+    const submitBtn = document.getElementById('regSubmitBtn');
+    
+    if (type === '보류') {
+      submitBtn.innerHTML = '💾 저장';
+      submitBtn.className = 'btn btn-primary btn-lg'; // 파란색으로 변경
+    } else {
+      submitBtn.innerHTML = '✅ 등록 완료';
+      submitBtn.className = 'btn btn-success btn-lg'; // 초록색 유지
+    }
 
     document.getElementById('regConsultId').value = consultId;
     document.getElementById('regName').value = ''; // 학생 이름은 등록 시 정확히 입력받도록 비움
@@ -612,19 +632,18 @@ const App = {
       consultNote: document.getElementById('regNote').value,
     };
 
-    // 1. 데이터 저장 (비동기 완료 대기)
     const newStudent = await Store.addStudent(studentData);
-    await Store.updateConsultation(consultId, { status: '등록완료', consultNote: studentData.consultNote });
+    await Store.updateConsultation(consultId, { status: this.currentRegType === '보류' ? '보류' : '등록완료', consultNote: studentData.consultNote });
 
     // 2. 모달 닫기 및 UI 갱신 (사용자 경험 우선)
     this.closeModal('registerModal');
-    this.showToast('🎉 학생 등록 완료! 첫 수업 일정이 캘린더에 추가되었습니다.');
+    this.showToast(this.currentRegType === '보류' ? '💾 상담 정보가 보류로 저장되었습니다.' : '🎉 학생 등록 완료! 첫 수업 일정이 캘린더에 추가되었습니다.');
     this.renderConsultations();
     this.renderStudents();
     this.updateBadges();
 
-    // 3. 구글 캘린더 자동 팝업 (가장 마지막에 실행하여 브라우저 차단 최소화)
-    if (newStudent) {
+    // 3. 구글 캘린더 자동 팝업 (등록일 때만 실행)
+    if (newStudent && this.currentRegType === '등록') {
       const calUrl = this._buildFirstClassCalendarUrl(newStudent);
       // 브라우저 팝업 차단 방지를 위해 약간의 지연 후 실행
       setTimeout(() => {
