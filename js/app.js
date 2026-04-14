@@ -404,7 +404,7 @@ const App = {
   },
 
   // --- Consultations ---
-  saveConsultation() {
+  async saveConsultation() {
     const data = {
       date: document.getElementById('consultDate').value,
       time: document.getElementById('consultTime').value,
@@ -415,12 +415,15 @@ const App = {
       memo: document.getElementById('consultMemo').value,
     };
 
-    const consultation = Store.addConsultation(data);
+    // 데이터 저장 (비동기 완료 대기)
+    const consultation = await Store.addConsultation(data);
     document.getElementById('consultationForm').reset();
     
     // 구글 캘린더 추가 링크 자동 열기 (새 창 팝업)
-    const calUrl = this._buildGoogleCalendarUrl(consultation);
-    window.open(calUrl, 'GoogleCalendar', 'width=900,height=800,scrollbars=yes,resizable=yes');
+    if (consultation) {
+      const calUrl = this._buildGoogleCalendarUrl(consultation);
+      window.open(calUrl, 'GoogleCalendar', 'width=900,height=800,scrollbars=yes,resizable=yes');
+    }
     
     this.showToast('상담 예약이 등록되고 구글 캘린더가 새 창에서 열렸습니다! 📅');
     this.updateBadges();
