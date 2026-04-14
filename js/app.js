@@ -462,11 +462,9 @@ const App = {
             <button class="btn-action" onclick="App.openConsultComplete('${c.id}')" title="상담 기록/수정">
               <span class="icon">✏️</span> 수정
             </button>
-            ${c.status !== '예약됨' ? `
-              <button class="btn-action" onclick="App.viewReportByConsultation('${c.id}')" title="보고서 보기">
-                <span class="icon">📄</span> 보고서
-              </button>
-            ` : ''}
+            <button class="btn-action" onclick="App.viewReportByConsultation('${c.id}')" title="보고서 보기">
+              <span class="icon">📄</span> 보고서
+            </button>
             ${['보류', '미등록', '등록대기'].includes(c.status) ? `
               <button class="btn btn-sm btn-success" onclick="App.openRegisterModal('${c.id}')" style="padding: 4px 8px; font-size: 11px;">등록</button>
             ` : ''}
@@ -730,19 +728,19 @@ const App = {
 
     const student = Store.getStudents().find(s => s.consultationId === consultId);
     
-    // 학생 정보가 있으면 학생 정보를, 없으면 상담 정보를 바탕으로 가상 데이터 생성
+    // 학생 정보가 있으면 학생 정보를, 없으면 상담 정보를 바탕으로 데이터 생성
     const reportData = student ? {
       ...student,
       consultDate: Store.getConsultation(student.consultationId)?.date || student.registeredAt
     } : {
-      name: c.name,
-      grade: c.grade,
-      className: c.className,
-      registeredAt: c.date,
-      consultDate: c.date,
-      phone: c.phone,
+      name: c.name || '',
+      grade: c.grade || '',
+      className: c.className || '',
+      registeredAt: c.date || '',
+      consultDate: c.date || '',
+      phone: c.phone || '',
       parentPhone: c.parentPhone || '',
-      consultNote: c.consultNote,
+      consultNote: c.consultNote || '',
       days: null,
       firstClassDate: null
     };
