@@ -643,23 +643,26 @@ const App = {
           <tbody>
             <tr>
               <th>1. 상담일</th>
-              <td>${this._formatDate(s.consultDate || s.registeredAt)}</td>
+              <td><input type="text" id="reportEditDate" class="report-input" value="${s.consultDate || s.registeredAt || ''}" placeholder="YYYY-MM-DD"></td>
             </tr>
             <tr>
               <th>2. 상담자</th>
-              <td>학 년: ${s.grade}　　이 름: <strong>${s.name}</strong></td>
+              <td>
+                학 년: <input type="text" id="reportEditGrade" class="report-input-inline" style="width: 80px;" value="${s.grade || ''}">
+                이 름: <input type="text" id="reportEditName" class="report-input-inline" style="width: 120px; font-weight: bold;" value="${s.name || ''}">
+              </td>
             </tr>
             <tr>
               <th>3. 소속반</th>
-              <td>${s.className}</td>
+              <td><input type="text" id="reportEditClass" class="report-input" value="${s.className || ''}"></td>
             </tr>
             <tr>
               <th>4. 첫수업일</th>
-              <td>${s.firstClassDate ? this._formatDate(s.firstClassDate) : '-'}</td>
+              <td><input type="text" id="reportEditFirstDate" class="report-input" value="${s.firstClassDate || ''}" placeholder="YYYY-MM-DD"></td>
             </tr>
             <tr>
               <th>5. 이번달 수업수</th>
-              <td>${monthlyClasses}회</td>
+              <td><input type="text" id="reportEditMonthlyClasses" class="report-input-inline" style="width: 60px;" value="${monthlyClasses.toString().replace('회', '')}">회</td>
             </tr>
             <tr>
               <th>6. 상담내용</th>
@@ -669,14 +672,17 @@ const App = {
             </tr>
             <tr>
               <th>7. 반/요일,시간</th>
-              <td>${s.days ? s.days.join(', ') : '-'} ${s.time || ''}</td>
+              <td>
+                <input type="text" id="reportEditDays" class="report-input-inline" style="width: 150px;" value="${s.days ? s.days.join(', ') : ''}" placeholder="월, 수, 금">
+                <input type="text" id="reportEditTime" class="report-input-inline" style="width: 100px;" value="${s.time || ''}" placeholder="14:00">
+              </td>
             </tr>
             <tr class="contact-row">
               <th rowspan="2">연락처</th>
-              <td>본　인: ${s.phone || '-'}</td>
+              <td>본　인: <input type="text" id="reportEditPhone" class="report-input-inline" style="width: 200px;" value="${s.phone || ''}"></td>
             </tr>
             <tr class="contact-row">
-              <td>부모님: ${s.parentPhone || '-'}</td>
+              <td>부모님: <input type="text" id="reportEditParentPhone" class="report-input-inline" style="width: 200px;" value="${s.parentPhone || ''}"></td>
             </tr>
           </tbody>
         </table>
@@ -726,22 +732,39 @@ const App = {
   },
 
   async saveReportFromView(id, type) {
-    const newNote = document.getElementById('reportEditNote').value.trim();
-    
+    // 모든 필드 데이터 수집
+    const updates = {
+      consultDate: document.getElementById('reportEditDate').value.trim(),
+      grade: document.getElementById('reportEditGrade').value.trim(),
+      name: document.getElementById('reportEditName').value.trim(),
+      className: document.getElementById('reportEditClass').value.trim(),
+      firstClassDate: document.getElementById('reportEditFirstDate').value.trim(),
+      consultNote: document.getElementById('reportEditNote').value.trim(),
+      time: document.getElementById('reportEditTime').value.trim(),
+      phone: document.getElementById('reportEditPhone').value.trim(),
+      parentPhone: document.getElementById('reportEditParentPhone').value.trim(),
+    };
+
+    // 요일 데이터 처리 (쉼표로 구분된 문자열을 배열로 변환)
+    const daysStr = document.getElementById('reportEditDays').value.trim();
+    if (daysStr) {
+      updates.days = daysStr.split(',').map(d => d.trim()).filter(d => d);
+    }
+
     try {
       if (type === 'student') {
-        // 학생 정보 수정을 통해 상담 기록까지 자동 동기화
-        await Store.updateStudent(id, { consultNote: newNote });
+        // 학생 정보 업데이트 (상담 기록도 자동 동기화됨)
+        await Store.updateStudent(id, updates);
       } else {
-        // 학생이 아닌 상담 데이터만 직접 수정
-        await Store.updateConsultation(id, { consultNote: newNote });
+        // 상담 정보 직접 업데이트
+        await Store.updateConsultation(id, updates);
       }
       
-      this.showToast('보고서 내용이 저장되었습니다! ✨');
+      this.showToast('보고서의 모든 변경사항이 저장되었습니다! ✨');
       this.renderConsultations();
       this.renderStudents();
     } catch (e) {
-      console.error('Report Save Error:', e);
+      console.error('Report Full Save Error:', e);
       this.showToast('저장에 실패했습니다.', 'error');
     }
   },
@@ -755,8 +778,12 @@ const App = {
     // 학생 정보가 있으면 학생 정보를, 없으면 상담 정보를 바탕으로 데이터 생성
     const reportData = student ? {
       ...student,
+      id: student.id, // 명시적 ID 포함
+      consultationId: student.consultationId,
       consultDate: Store.getConsultation(student.consultationId)?.date || student.registeredAt
     } : {
+      id: c.id, // 상담 ID 반드시 포함 (저장 시 필요)
+      consultationId: null,
       name: c.name || '',
       grade: c.grade || '',
       className: c.className || '',
