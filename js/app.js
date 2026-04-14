@@ -616,6 +616,7 @@ const App = {
         <td>
           <button class="btn btn-sm btn-ghost" onclick="App.viewReport('${s.id}')">📄 보고서</button>
           <button class="btn btn-sm btn-ghost" onclick="App.openEditStudentModal('${s.id}')">✏️ 수정</button>
+          <button class="btn btn-sm btn-ghost" onclick="App.deleteStudent('${s.id}')" style="color:var(--danger);">🗑️ 삭제</button>
         </td>
       </tr>
     `).join('');
@@ -845,7 +846,16 @@ const App = {
     this.closeModal('studentEditModal');
     this.showToast('학생 정보가 수정되었으며 연결된 상담 기록도 동기화되었습니다! ✨');
     this.renderStudents();
-    this.renderConsultations(); // 상담 목록도 새로고침
+    this.renderConsultations(); // 상담 목록도 함께 새로고침하여 동기화 확인
+  },
+
+  deleteStudent(id) {
+    if (confirm('정말 이 학생을 삭제하시겠습니까? 관련 상담 기록은 유지됩니다.')) {
+      Store.deleteStudent(id);
+      this.showToast('학생 정보가 삭제되었습니다.');
+      this.renderStudents();
+      this.updateBadges();
+    }
   },
 
   _escapeHtml(text) {
