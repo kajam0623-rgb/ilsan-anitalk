@@ -612,20 +612,25 @@ const App = {
       consultNote: document.getElementById('regNote').value,
     };
 
+    // 1. 데이터 저장 (비동기 완료 대기)
     const newStudent = await Store.addStudent(studentData);
     await Store.updateConsultation(consultId, { status: '등록완료', consultNote: studentData.consultNote });
 
-    // 첫 수업 일정 구글 캘린더 열기
-    if (newStudent) {
-      const calUrl = this._buildFirstClassCalendarUrl(newStudent);
-      window.open(calUrl, 'GoogleCalendar', 'width=900,height=800,scrollbars=yes,resizable=yes');
-    }
-
+    // 2. 모달 닫기 및 UI 갱신 (사용자 경험 우선)
     this.closeModal('registerModal');
     this.showToast('🎉 학생 등록 완료! 첫 수업 일정이 캘린더에 추가되었습니다.');
     this.renderConsultations();
     this.renderStudents();
     this.updateBadges();
+
+    // 3. 구글 캘린더 자동 팝업 (가장 마지막에 실행하여 브라우저 차단 최소화)
+    if (newStudent) {
+      const calUrl = this._buildFirstClassCalendarUrl(newStudent);
+      // 브라우저 팝업 차단 방지를 위해 약간의 지연 후 실행
+      setTimeout(() => {
+        window.open(calUrl, 'GoogleCalendar', 'width=1000,height=850,scrollbars=yes,resizable=yes');
+      }, 100);
+    }
   },
 
   // --- Students ---
