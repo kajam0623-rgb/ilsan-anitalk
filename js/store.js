@@ -8,6 +8,24 @@ const Store = {
     CONSULTATIONS: 'anitalk_consultations',
     STUDENTS: 'anitalk_students',
   },
+  db: null,
+  auth: null,
+  userId: null,
+  isInitialized: false,
+
+  // --- Firebase Initialization ---
+  async initFirebase(config) {
+    if (this.isInitialized) return;
+    try {
+      firebase.initializeApp(config);
+      this.db = firebase.firestore();
+      this.auth = firebase.auth();
+      this.isInitialized = true;
+      console.log('Firebase Initialized');
+    } catch (e) {
+      console.error('Firebase Init Error:', e);
+    }
+  },
 
   // --- Utility ---
   _generateId() {
@@ -45,8 +63,7 @@ const Store = {
     return this.getConsultations().find(c => c.id === id);
   },
 
-  addConsultation(data) {
-    const consultations = this._get(this.KEYS.CONSULTATIONS);
+  async addConsultation(data) {
     const consultation = {
       id: this._generateId(),
       type: '신규상담',
@@ -54,32 +71,50 @@ const Store = {
       createdAt: new Date().toISOString(),
       ...data,
     };
+
+    // 로컬 저장
+    const consultations = this._get(this.KEYS.CONSULTATIONS);
     consultations.push(consultation);
     this._set(this.KEYS.CONSULTATIONS, consultations);
+
+    // Firebase 동기화
+    if (this.userId && this.db) {
+      await this.db.collection('users').doc(this.userId).collection('consultations').doc(consultation.id).set(consultation);
+    }
+
     return consultation;
   },
 
-  updateConsultation(id, updates) {
+  async updateConsultation(id, updates) {
     const consultations = this._get(this.KEYS.CONSULTATIONS);
     const idx = consultations.findIndex(c => c.id === id);
     if (idx !== -1) {
       consultations[idx] = { ...consultations[idx], ...updates };
       this._set(this.KEYS.CONSULTATIONS, consultations);
 
+      // --- Firebase 동기화 ---
+      if (this.userId && this.db) {
+        await this.db.collection('users').doc(this.userId).collection('consultations').doc(id).update(updates);
+      }
+
       // --- 학생 정보와 동기화 ---
-      // 상담 정보가 변경되면 연결된 학생 정보도 업데이트 (이름, 학년, 반, 전화번호, 상담내용 등)
+      // ... (기존 동기화 로직 유지)
       const students = this._get(this.KEYS.STUDENTS);
       const studentIdx = students.findIndex(s => s.consultationId === id);
       if (studentIdx !== -1) {
         const studentUpdates = {};
-        if (updates.name) studentUpdates.parentName = updates.name; // 상담 신청자는 학부모 성함으로 매칭됨
+        if (updates.name) studentUpdates.parentName = updates.name; 
         if (updates.grade) studentUpdates.grade = updates.grade;
         if (updates.className) studentUpdates.className = updates.className;
         if (updates.phone) studentUpdates.phone = updates.phone;
         if (updates.consultNote) studentUpdates.consultNote = updates.consultNote;
         
+        // --- 학생 업데이트 시에도 Firebase 동기화 필요 (updateStudent 호출 대신 직접 처리) ---
         students[studentIdx] = { ...students[studentIdx], ...studentUpdates };
         this._set(this.KEYS.STUDENTS, students);
+        if (this.userId && this.db) {
+          await this.db.collection('users').doc(this.userId).collection('students').doc(students[studentIdx].id).update(studentUpdates);
+        }
       }
 
       return consultations[idx];
@@ -87,9 +122,12 @@ const Store = {
     return null;
   },
 
-  deleteConsultation(id) {
+  async deleteConsultation(id) {
     const consultations = this._get(this.KEYS.CONSULTATIONS).filter(c => c.id !== id);
     this._set(this.KEYS.CONSULTATIONS, consultations);
+    if (this.userId && this.db) {
+      await this.db.collection('users').doc(this.userId).collection('consultations').doc(id).delete();
+    }
   },
 
   // --- Students ---
@@ -103,20 +141,25 @@ const Store = {
     return this.getStudents().find(s => s.id === id);
   },
 
-  addStudent(data) {
-    const students = this._get(this.KEYS.STUDENTS);
+  async addStudent(data) {
     const student = {
       id: this._generateId(),
       status: '재학',
       registeredAt: new Date().toISOString().split('T')[0],
       ...data,
     };
+
+    const students = this._get(this.KEYS.STUDENTS);
     students.push(student);
     this._set(this.KEYS.STUDENTS, students);
+
+    if (this.userId && this.db) {
+      await this.db.collection('users').doc(this.userId).collection('students').doc(student.id).set(student);
+    }
     return student;
   },
 
-  updateStudent(id, updates) {
+  async updateStudent(id, updates) {
     const students = this._get(this.KEYS.STUDENTS);
     const idx = students.findIndex(s => s.id === id);
     if (idx !== -1) {
@@ -124,8 +167,11 @@ const Store = {
       students[idx] = { ...oldStudent, ...updates };
       this._set(this.KEYS.STUDENTS, students);
 
+      if (this.userId && this.db) {
+        await this.db.collection('users').doc(this.userId).collection('students').doc(id).update(updates);
+      }
+
       // --- 상담 정보와 동기화 ---
-      // 학생 정보가 변경되면 연결된 상담 정보도 업데이트
       if (oldStudent.consultationId) {
         const consultations = this._get(this.KEYS.CONSULTATIONS);
         const consultIdx = consultations.findIndex(c => c.id === oldStudent.consultationId);
@@ -139,6 +185,9 @@ const Store = {
 
           consultations[consultIdx] = { ...consultations[consultIdx], ...consultUpdates };
           this._set(this.KEYS.CONSULTATIONS, consultations);
+          if (this.userId && this.db) {
+            await this.db.collection('users').doc(this.userId).collection('consultations').doc(oldStudent.consultationId).update(consultUpdates);
+          }
         }
       }
 
@@ -147,9 +196,25 @@ const Store = {
     return null;
   },
 
-  deleteStudent(id) {
+  async deleteStudent(id) {
     const students = this._get(this.KEYS.STUDENTS).filter(s => s.id !== id);
     this._set(this.KEYS.STUDENTS, students);
+    if (this.userId && this.db) {
+      await this.db.collection('users').doc(this.userId).collection('students').doc(id).delete();
+    }
+  },
+
+  // --- Remote Fetching ---
+  async fetchRemoteData() {
+    if (!this.userId || !this.db) return;
+    
+    const consultsSnapshot = await this.db.collection('users').doc(this.userId).collection('consultations').get();
+    const remoteConsults = consultsSnapshot.docs.map(doc => doc.data());
+    this._set(this.KEYS.CONSULTATIONS, remoteConsults);
+
+    const studentsSnapshot = await this.db.collection('users').doc(this.userId).collection('students').get();
+    const remoteStudents = studentsSnapshot.docs.map(doc => doc.data());
+    this._set(this.KEYS.STUDENTS, remoteStudents);
   },
 
   // --- Statistics ---

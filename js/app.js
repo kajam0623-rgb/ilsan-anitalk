@@ -18,6 +18,12 @@ const App = {
     this.renderDashboard();
     this.updateBadges();
     
+    // --- Firebase 초기화 ---
+    if (typeof firebaseConfig !== 'undefined' && firebaseConfig.apiKey !== 'YOUR_API_KEY') {
+      Store.initFirebase(firebaseConfig);
+      this.initAuth();
+    }
+    
     // --- 네이버 사진 복붙 & 드래그 드롭 설정 ---
     const pasteArea = document.getElementById('naverPasteArea');
     if (pasteArea) {
@@ -855,6 +861,59 @@ const App = {
       this.showToast('학생 정보가 삭제되었습니다.');
       this.renderStudents();
       this.updateBadges();
+    }
+  },
+
+
+  // --- Firebase Auth ---
+  initAuth() {
+    firebase.auth().onAuthStateChanged(async (user) => {
+      const loggedOutUI = document.getElementById('userLoggedOut');
+      const loggedInUI = document.getElementById('userLoggedIn');
+      
+      if (user) {
+        // 로그인 성공
+        Store.userId = user.uid;
+        document.getElementById('userName').textContent = user.displayName || '사용자';
+        document.getElementById('userEmail').textContent = user.email;
+        if (user.photoURL) {
+          document.getElementById('userAvatar').innerHTML = `<img src="${user.photoURL}" style="width:100%; height:100%; border-radius:50%;">`;
+        }
+
+        loggedOutUI.style.display = 'none';
+        loggedInUI.style.display = 'flex';
+
+        this.showToast(`${user.displayName}님, 환영합니다! 실시간 동기화가 활성화되었습니다. ☁️`);
+        
+        // 원격 데이터 불러오기
+        await Store.fetchRemoteData();
+        this.renderDashboard();
+        this.renderConsultations();
+        this.renderStudents();
+      } else {
+        // 로그아웃 상태
+        Store.userId = null;
+        loggedOutUI.style.display = 'block';
+        loggedInUI.style.display = 'none';
+        document.getElementById('userAvatar').innerHTML = '👤';
+      }
+    });
+  },
+
+  async login() {
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      await firebase.auth().signInWithPopup(provider);
+    } catch (e) {
+      console.error('Login Error:', e);
+      alert('로그인에 실패했습니다. Firebase 콘솔에서 Google 로그인을 활성화했는지 확인해주세요.');
+    }
+  },
+
+  async logout() {
+    if (confirm('로그아웃 하시겠습니까? 데이터는 로컬에 남지만 동기화는 중단됩니다.')) {
+      await firebase.auth().signOut();
+      location.reload(); // 상태 초기화를 위해 새로고침
     }
   },
 

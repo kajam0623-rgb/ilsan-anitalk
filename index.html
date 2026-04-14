@@ -44,6 +44,20 @@
           <span>학생 명단</span>
         </div>
       </nav>
+      <div class="sidebar-user" id="sidebarUser">
+        <div class="user-logged-out" id="userLoggedOut">
+          <button class="btn btn-primary" style="width:100%;" onclick="App.login()">🔑 구글 로그인</button>
+          <p style="font-size:0.7rem; opacity:0.6; margin-top:8px;">동기화를 위해 로그인하세요</p>
+        </div>
+        <div class="user-logged-in" id="userLoggedIn" style="display:none;">
+          <div class="user-avatar" id="userAvatar">👤</div>
+          <div class="user-info">
+            <div class="user-name" id="userName">사용자</div>
+            <div class="user-email" id="userEmail">email@example.com</div>
+          </div>
+          <button class="user-logout" onclick="App.logout()" title="로그아웃">✕</button>
+        </div>
+      </div>
       <div class="sidebar-footer">
         © 2026 애니톡만화학원
       </div>
@@ -488,6 +502,12 @@
   <!-- html2canvas (화면 캡처 라이브러리) -->
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
+  <!-- Firebase (클라우드 DB) -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+  <script src="js/config.js"></script>
   <script src="js/store.js"></script>
   <script src="js/app.js"></script>
 </body>
