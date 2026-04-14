@@ -298,6 +298,40 @@ const App = {
     window.open(url, 'GoogleCalendar', 'width=900,height=800,scrollbars=yes,resizable=yes');
   },
 
+  _buildFirstClassCalendarUrl(student) {
+    const { firstClassDate, time, name, grade, className, phone, parentPhone, parentName, days } = student;
+    
+    const startDate = firstClassDate.replace(/-/g, '');
+    const startTime = (time || '14:00').replace(':', '') + '00';
+    // 기본적으로 1시간 30분 수업으로 설정
+    const startHour = parseInt((time || '14:00').split(':')[0]);
+    const startMin = parseInt((time || '14:00').split(':')[1] || '00');
+    
+    let endHour = startHour + 1;
+    let endMin = startMin + 30;
+    if (endMin >= 60) {
+      endHour += 1;
+      endMin -= 60;
+    }
+    const endTime = String(endHour).padStart(2, '0') + String(endMin).padStart(2, '0') + '00';
+    
+    const start = `${startDate}T${startTime}`;
+    const end = `${startDate}T${endTime}`;
+    
+    const title = encodeURIComponent(`[첫수업] ${name} (${grade} / ${className})`);
+    const details = encodeURIComponent(
+      `✨ 신규 등록 학생 첫 수업\n` +
+      `학생 이름: ${name}\n` +
+      `학년: ${grade} / 반: ${className}\n` +
+      `수업 요일: ${days ? days.join(', ') : '-'}\n` +
+      `학부모: ${parentName || '-'} (${parentPhone || '-'})\n` +
+      `학생 연락처: ${phone || '-'}\n\n` +
+      `— 애니톡만화학원`
+    );
+    
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${start}/${end}&details=${details}&location=${encodeURIComponent('애니톡만화학원')}&authuser=anitalk3134@gmail.com`;
+  },
+
   // --- Naver Auto Fill ---
   parseNaverImage(event) {
     const file = event.target.files[0];
@@ -537,7 +571,7 @@ const App = {
     this.openModal('registerModal');
   },
 
-  registerStudent() {
+  async registerStudent() {
     const consultId = document.getElementById('regConsultId').value;
     const c = Store.getConsultation(consultId);
 
@@ -578,12 +612,19 @@ const App = {
       consultNote: document.getElementById('regNote').value,
     };
 
-    Store.addStudent(studentData);
-    Store.updateConsultation(consultId, { status: '등록완료', consultNote: studentData.consultNote });
+    const newStudent = await Store.addStudent(studentData);
+    await Store.updateConsultation(consultId, { status: '등록완료', consultNote: studentData.consultNote });
+
+    // 첫 수업 일정 구글 캘린더 열기
+    if (newStudent) {
+      const calUrl = this._buildFirstClassCalendarUrl(newStudent);
+      window.open(calUrl, 'GoogleCalendar', 'width=900,height=800,scrollbars=yes,resizable=yes');
+    }
 
     this.closeModal('registerModal');
-    this.showToast('🎉 학생이 등록되었습니다!');
+    this.showToast('🎉 학생 등록 완료! 첫 수업 일정이 캘린더에 추가되었습니다.');
     this.renderConsultations();
+    this.renderStudents();
     this.updateBadges();
   },
 
