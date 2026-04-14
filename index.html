@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="애니톡만화학원 통합 관리 시스템 - 상담예약, 학생관리, 보고서">
+  <title>애니톡 학원 관리 시스템</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="메뉴 열기">☰</button>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <div class="logo-icon">🎨</div>
+          <div>
+            <div class="logo-text">애니톡</div>
+            <div class="logo-sub">만화학원 관리</div>
+          </div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">메뉴</div>
+        <div class="nav-item active" data-page="dashboard" id="nav-dashboard">
+          <span class="nav-icon">📊</span>
+          <span>대시보드</span>
+        </div>
+        <div class="nav-item" data-page="new-consultation" id="nav-new-consultation">
+          <span class="nav-icon">📅</span>
+          <span>상담 예약</span>
+        </div>
+        <div class="nav-item" data-page="consultations" id="nav-consultations">
+          <span class="nav-icon">📋</span>
+          <span>상담 목록</span>
+          <span class="nav-badge" id="consultBadge"></span>
+        </div>
+        <div class="nav-item" data-page="students" id="nav-students">
+          <span class="nav-icon">👥</span>
+          <span>학생 명단</span>
+        </div>
+      </nav>
+      <div class="sidebar-footer">
+        © 2026 애니톡만화학원
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+      <!-- ===== Dashboard Page ===== -->
+      <div class="page active" id="page-dashboard">
+        <div class="page-header">
+          <h1>📊 대시보드</h1>
+          <p class="page-subtitle" id="dashboardDate"></p>
+        </div>
+
+        <div class="stats-grid" id="statsGrid">
+          <!-- Filled by JS -->
+        </div>
+
+        <div class="dashboard-grid">
+          <div class="card">
+            <div class="card-header">
+              <h2>📅 오늘의 상담</h2>
+            </div>
+            <div class="card-body" id="todaySchedule">
+              <!-- Filled by JS -->
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2>👥 반별 인원 현황</h2>
+            </div>
+            <div class="card-body" id="classChart">
+              <!-- Filled by JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== New Consultation Page ===== -->
+      <div class="page" id="page-new-consultation">
+        <div class="page-header">
+          <h1>📅 신규 상담 예약</h1>
+          <p class="page-subtitle">새로운 상담 예약을 등록합니다</p>
+        </div>
+
+        <div class="card" style="margin-bottom: 24px; border: 2px dashed var(--primary); background: #fdfcff;">
+          <div class="card-body">
+            <h3 style="margin-top:0; color:var(--primary); font-size:1.1rem; margin-bottom:12px;">🚀 빠른 예약 자동 입력 (사진 / 텍스트)</h3>
+            <p style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:12px;">네이버 예약 <b>캡처 사진을 복사해서 붙여넣기(Ctrl+V)</b> 하거나 파일을 이 칸에 끌어다 놓으세요!</p>
+            <textarea class="form-textarea" id="naverPasteArea" rows="4" placeholder="(이곳 클릭 후 Ctrl + V 로 사진 붙여넣기)&#10;&#10;* 텍스트를 그대로 복사하신 경우에도 여기에 붙여넣고 '텍스트 분석'을 누르면 됩니다." style="resize:vertical;"></textarea>
+            <div style="display: flex; gap: 8px; margin-top: 12px;">
+              <button type="button" class="btn btn-secondary" onclick="App.parseNaverText()" style="flex:1;">텍스트 분석 ⚡</button>
+              <label class="btn btn-primary" style="flex:1; text-align:center; height:100%; display:flex; align-items:center; justify-content:center; cursor:pointer; margin:0;">
+                📸 폰 사진 업로드
+                <input type="file" accept="image/*" id="naverImageInput" style="display:none;" onchange="App.parseNaverImage(event)">
+              </label>
+            </div>
+            <div id="ocrStatus" style="font-size:0.85rem; color:var(--primary); text-align:center; margin-top:8px; display:none;">이미지 분석 중... (잠시만 기다려주세요)</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-body">
+            <form id="consultationForm" class="form-grid">
+              <div class="form-group">
+                <label class="form-label">상담 날짜 <span class="required">*</span></label>
+                <input type="date" class="form-input" id="consultDate" required onclick="this.showPicker()" style="cursor:pointer;">
+              </div>
+              <div class="form-group">
+                <label class="form-label">상담 시간 <span class="required">*</span></label>
+                <select class="form-select" id="consultTime" required>
+                  <option value="13:00" selected>오후 1:00</option>
+                  <option value="13:30">오후 1:30</option>
+                  <option value="14:00">오후 2:00</option>
+                  <option value="14:30">오후 2:30</option>
+                  <option value="15:00">오후 3:00</option>
+                  <option value="15:30">오후 3:30</option>
+                  <option value="16:00">오후 4:00</option>
+                  <option value="16:30">오후 4:30</option>
+                  <option value="17:00">오후 5:00</option>
+                  <option value="17:30">오후 5:30</option>
+                  <option value="18:00">오후 6:00</option>
+                  <option value="18:30">오후 6:30</option>
+                  <option value="19:00">오후 7:00</option>
+                  <option value="19:30">오후 7:30</option>
+                  <option value="20:00">오후 8:00</option>
+                  <option value="20:30">오후 8:30</option>
+                  <option value="21:00">오후 9:00</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">학년 <span class="required">*</span></label>
+                <select class="form-select" id="consultGrade" required>
+                  <option value="">선택하세요</option>
+                  <option value="초3">초3</option>
+                  <option value="초4">초4</option>
+                  <option value="초5">초5</option>
+                  <option value="초6">초6</option>
+                  <option value="중1">중1</option>
+                  <option value="중2">중2</option>
+                  <option value="중3">중3</option>
+                  <option value="고1">고1</option>
+                  <option value="고2">고2</option>
+                  <option value="고3">고3</option>
+                  <option value="성인">성인</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">상담 반 <span class="required">*</span></label>
+                <select class="form-select" id="consultClass" required>
+                  <option value="">선택하세요</option>
+                  <option value="고등반">고등반</option>
+                  <option value="주니어반">주니어반</option>
+                  <option value="취미반">취미반</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">이름 (신청자) <span class="required">*</span></label>
+                <input type="text" class="form-input" id="consultName" placeholder="상담을 신청한 분의 이름" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">전화번호 <span class="required">*</span></label>
+                <input type="tel" class="form-input" id="consultPhone" placeholder="010-0000-0000" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">메모</label>
+                <input type="text" class="form-input" id="consultMemo" placeholder="간단한 메모 (선택)">
+              </div>
+              <div class="form-group full-width" style="display:flex; gap:12px; justify-content:flex-end;">
+                <button type="reset" class="btn btn-secondary">초기화</button>
+                <button type="submit" class="btn btn-primary btn-lg">📅 상담 예약 등록</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Consultations List Page ===== -->
+      <div class="page" id="page-consultations">
+        <div class="page-header">
+          <div class="page-header-row">
+            <div>
+              <h1>📋 상담 목록</h1>
+              <p class="page-subtitle">모든 상담 예약을 관리합니다</p>
+            </div>
+            <button class="btn btn-primary" onclick="App.navigate('new-consultation')">+ 새 상담 예약</button>
+          </div>
+        </div>
+
+        <div class="filter-tabs" id="consultFilterTabs">
+          <button class="filter-tab active" data-filter="전체">전체</button>
+          <button class="filter-tab" data-filter="예약됨">예약됨</button>
+          <button class="filter-tab" data-filter="상담완료">상담완료</button>
+          <button class="filter-tab" data-filter="등록완료">등록완료</button>
+          <button class="filter-tab" data-filter="미등록">미등록</button>
+        </div>
+
+        <div class="card">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>날짜</th>
+                  <th>시간</th>
+                  <th>신청자 이름</th>
+                  <th>예상 학년</th>
+                  <th>상담 반</th>
+                  <th>전화번호</th>
+                  <th>상태</th>
+                  <th>액션</th>
+                </tr>
+              </thead>
+              <tbody id="consultationTableBody">
+                <!-- Filled by JS -->
+              </tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="consultEmptyState" style="display:none;">
+            <div class="empty-icon">📅</div>
+            <h3>상담 예약이 없습니다</h3>
+            <p>새 상담 예약을 등록해 보세요</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Students Page ===== -->
+      <div class="page" id="page-students">
+        <div class="page-header">
+          <div class="page-header-row">
+            <div>
+              <h1>👥 학생 명단</h1>
+              <p class="page-subtitle">등록된 학생을 관리합니다</p>
+            </div>
+            <div class="search-bar">
+              <span class="search-icon">🔍</span>
+              <input type="text" id="studentSearch" placeholder="이름으로 검색...">
+            </div>
+          </div>
+        </div>
+
+        <div class="filter-tabs" id="studentFilterTabs">
+          <button class="filter-tab active" data-filter="전체">전체</button>
+          <button class="filter-tab" data-filter="고등반">고등반</button>
+          <button class="filter-tab" data-filter="주니어반">주니어반</button>
+          <button class="filter-tab" data-filter="취미반">취미반</button>
+        </div>
+
+        <div class="card">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>상담날짜</th>
+                  <th>등록날짜</th>
+                  <th>이름</th>
+                  <th>학년</th>
+                  <th>반</th>
+                  <th>수업 요일</th>
+                  <th>시간</th>
+                  <th>전화번호</th>
+                  <th>액션</th>
+                </tr>
+              </thead>
+              <tbody id="studentTableBody">
+                <!-- Filled by JS -->
+              </tbody>
+            </table>
+          </div>
+          <div class="empty-state" id="studentEmptyState" style="display:none;">
+            <div class="empty-icon">👥</div>
+            <h3>등록된 학생이 없습니다</h3>
+            <p>상담 후 학생을 등록해 보세요</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Report Page ===== -->
+      <div class="page" id="page-report">
+        <div class="page-header">
+          <div class="page-header-row">
+            <div>
+              <h1>📄 상담 보고서</h1>
+              <p class="page-subtitle">등록 보고서 조회</p>
+            </div>
+            <button class="btn btn-secondary" onclick="App.navigate('students')">← 학생 목록으로</button>
+          </div>
+        </div>
+        <div id="reportContent">
+          <!-- Filled by JS -->
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- ===== Consultation Complete Modal ===== -->
+  <div class="modal-overlay" id="consultCompleteModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>📝 상담 내용 기록</h2>
+        <button class="modal-close" onclick="App.closeModal('consultCompleteModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modalConsultId">
+        <div class="form-group">
+          <label class="form-label">상담 내용 <span class="required">*</span></label>
+          <textarea class="form-textarea" id="modalConsultNote" maxlength="500"
+                    placeholder="상담 내용을 기록하세요 (500자 이내)"></textarea>
+          <div class="form-char-count"><span id="modalCharCount">0</span>/500</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">상담 결과</label>
+          <select class="form-select" id="modalConsultResult">
+            <option value="보류" selected>보류</option>
+            <option value="미등록">미등록</option>
+            <option value="등록">등록</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeModal('consultCompleteModal')">취소</button>
+        <button class="btn btn-primary" onclick="App.completeConsultation()">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Registration Modal ===== -->
+  <div class="modal-overlay" id="registerModal">
+    <div class="modal" style="max-width:700px;">
+      <div class="modal-header">
+        <h2>✅ 신규 등록</h2>
+        <button class="modal-close" onclick="App.closeModal('registerModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="regConsultId">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">학생 이름 <span class="required">*</span></label>
+            <input type="text" class="form-input" id="regName" placeholder="학생 이름을 입력하세요">
+          </div>
+          <div class="form-group">
+            <label class="form-label">상담자(학부모) 이름</label>
+            <input type="text" class="form-input" id="regParentName" readonly>
+          </div>
+          <div class="form-group">
+            <label class="form-label">학년</label>
+            <input type="text" class="form-input" id="regGrade" readonly>
+          </div>
+          <div class="form-group">
+            <label class="form-label">등록 반 <span class="required">*</span></label>
+            <select class="form-select" id="regClass" required>
+              <option value="고등반">고등반</option>
+              <option value="주니어반">주니어반</option>
+              <option value="취미반">취미반</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">첫 수업일 <span class="required">*</span></label>
+            <input type="date" class="form-input" id="regFirstDate" required>
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label">수업 요일 <span class="required">*</span></label>
+            <div class="checkbox-group">
+              <input type="checkbox" class="checkbox-pill" id="day-mon" value="월"><label for="day-mon">월</label>
+              <input type="checkbox" class="checkbox-pill" id="day-tue" value="화"><label for="day-tue">화</label>
+              <input type="checkbox" class="checkbox-pill" id="day-wed" value="수"><label for="day-wed">수</label>
+              <input type="checkbox" class="checkbox-pill" id="day-thu" value="목"><label for="day-thu">목</label>
+              <input type="checkbox" class="checkbox-pill" id="day-fri" value="금"><label for="day-fri">금</label>
+              <input type="checkbox" class="checkbox-pill" id="day-sat" value="토"><label for="day-sat">토</label>
+              <input type="checkbox" class="checkbox-pill" id="day-sun" value="일"><label for="day-sun">일</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">수업 시간 <span class="required">*</span></label>
+            <input type="text" class="form-input" id="regTime" placeholder="예: 18:00 - 20:00" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">부모님 전화번호</label>
+            <input type="tel" class="form-input" id="regParentPhone" placeholder="010-0000-0000">
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label">상담 내용 (보고서에 포함됨)</label>
+            <textarea class="form-textarea" id="regNote" maxlength="500"
+                      placeholder="상담 내용을 기록하세요 (500자 이내)"></textarea>
+            <div class="form-char-count"><span id="regCharCount">0</span>/500</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeModal('registerModal')">취소</button>
+        <button class="btn btn-success btn-lg" onclick="App.registerStudent()">✅ 등록 완료</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Student Edit Modal ===== -->
+  <div class="modal-overlay" id="studentEditModal">
+    <div class="modal" style="max-width:700px;">
+      <div class="modal-header">
+        <h2>✏️ 학생 정보 수정</h2>
+        <button class="modal-close" onclick="App.closeModal('studentEditModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editStudentId">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">학생 이름 <span class="required">*</span></label>
+            <input type="text" class="form-input" id="editName" placeholder="학생 이름을 입력하세요">
+          </div>
+          <div class="form-group">
+            <label class="form-label">학부모 성함</label>
+            <input type="text" class="form-input" id="editParentName">
+          </div>
+          <div class="form-group">
+            <label class="form-label">학년</label>
+            <select class="form-select" id="editGrade">
+              <option value="초3">초3</option>
+              <option value="초4">초4</option>
+              <option value="초5">초5</option>
+              <option value="초6">초6</option>
+              <option value="중1">중1</option>
+              <option value="중2">중2</option>
+              <option value="중3">중3</option>
+              <option value="고1">고1</option>
+              <option value="고2">고2</option>
+              <option value="고3">고3</option>
+              <option value="성인">성인</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">소속 반 <span class="required">*</span></label>
+            <select class="form-select" id="editClass" required>
+              <option value="고등반">고등반</option>
+              <option value="주니어반">주니어반</option>
+              <option value="취미반">취미반</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">첫 수업일</label>
+            <input type="date" class="form-input" id="editFirstDate">
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label">수업 요일</label>
+            <div class="checkbox-group">
+              <input type="checkbox" class="edit-checkbox-pill" id="edit-day-mon" value="월"><label for="edit-day-mon">월</label>
+              <input type="checkbox" class="edit-checkbox-pill" id="edit-day-tue" value="화"><label for="edit-day-tue">화</label>
+              <input type="checkbox" class="edit-checkbox-pill" id="edit-day-wed" value="수"><label for="edit-day-wed">수</label>
+              <input type="checkbox" class="edit-checkbox-pill" id="edit-day-thu" value="목"><label for="edit-day-thu">목</label>
+              <input type="checkbox" class="edit-checkbox-pill" id="edit-day-fri" value="금"><label for="edit-day-fri">금</label>
+              <input type="checkbox" class="edit-checkbox-pill" id="edit-day-sat" value="토"><label for="edit-day-sat">토</label>
+              <input type="checkbox" class="edit-checkbox-pill" id="edit-day-sun" value="일"><label for="edit-day-sun">일</label>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">수업 시간</label>
+            <input type="text" class="form-input" id="editTime" placeholder="예: 18:00 - 20:00">
+          </div>
+          <div class="form-group">
+            <label class="form-label">부모님 전화번호</label>
+            <input type="tel" class="form-input" id="editParentPhone" placeholder="010-0000-0000">
+          </div>
+          <div class="form-group full-width">
+            <label class="form-label">상담 및 특이사항</label>
+            <textarea class="form-textarea" id="editNote" maxlength="500" rows="4"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeModal('studentEditModal')">취소</button>
+        <button class="btn btn-primary" onclick="App.saveStudentEdit()">저장하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Tesseract.js (무료 브라우저 OCR) -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <!-- html2canvas (화면 캡처 라이브러리) -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+  <script src="js/store.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
