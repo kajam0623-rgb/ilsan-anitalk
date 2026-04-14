@@ -663,7 +663,9 @@ const App = {
             </tr>
             <tr>
               <th>6. 상담내용</th>
-              <td class="consult-note">${this._escapeHtml(s.consultNote || '기록 없음')}</td>
+              <td class="consult-note">
+                <textarea id="reportEditNote" class="report-textarea" placeholder="여기에 상담 내용을 입력하세요...">${s.consultNote || ''}</textarea>
+              </td>
             </tr>
             <tr>
               <th>7. 반/요일,시간</th>
@@ -679,9 +681,10 @@ const App = {
           </tbody>
         </table>
         <div class="report-actions">
-          <button class="btn btn-secondary" onclick="window.print()">🖨️ 인쇄</button>
+          <button class="btn btn-primary" onclick="App.saveReportFromView('${s.id}', '${s.consultationId ? 'student' : 'consultation'}')">💾 변경사항 저장</button>
           <button class="btn btn-secondary" onclick="App.saveReportAsImage('${s.name}')" style="background-color: var(--primary); color: white; border-color: var(--primary);">📥 이미지 저장</button>
-          <button class="btn btn-primary" onclick="App.navigate('students')">← 학생 목록</button>
+          <button class="btn btn-secondary" onclick="window.print()">🖨️ 인쇄</button>
+          <button class="btn btn-secondary" onclick="App.navigate('${s.consultationId ? 'students' : 'consultations'}')">← 돌아가기</button>
         </div>
       </div>
     `;
@@ -720,6 +723,27 @@ const App = {
       console.error('이미지 저장 오류:', err);
       this.showToast('이미지 저장 중 오류가 발생했습니다.', 'error');
     });
+  },
+
+  async saveReportFromView(id, type) {
+    const newNote = document.getElementById('reportEditNote').value.trim();
+    
+    try {
+      if (type === 'student') {
+        // 학생 정보 수정을 통해 상담 기록까지 자동 동기화
+        await Store.updateStudent(id, { consultNote: newNote });
+      } else {
+        // 학생이 아닌 상담 데이터만 직접 수정
+        await Store.updateConsultation(id, { consultNote: newNote });
+      }
+      
+      this.showToast('보고서 내용이 저장되었습니다! ✨');
+      this.renderConsultations();
+      this.renderStudents();
+    } catch (e) {
+      console.error('Report Save Error:', e);
+      this.showToast('저장에 실패했습니다.', 'error');
+    }
   },
 
   viewReportByConsultation(consultId) {
