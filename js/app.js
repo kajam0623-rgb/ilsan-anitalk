@@ -635,20 +635,38 @@ const App = {
       consultNote: document.getElementById('regNote').value,
     };
 
-    const newStudent = await Store.addStudent(studentData);
-    await Store.updateConsultation(consultId, { status: this.currentRegType === '보류' ? '보류' : '등록완료', consultNote: studentData.consultNote });
+    if (this.currentRegType === '보류') {
+      // 보류인 경우 학생으로 등록하지 않고 상담 기록만 상세히 업데이트
+      await Store.updateConsultation(consultId, { 
+        status: '보류', 
+        consultNote: studentData.consultNote,
+        className: studentData.className,
+        days: studentData.days,
+        time: studentData.time,
+        firstClassDate: studentData.firstClassDate,
+        parentPhone: studentData.parentPhone
+      });
+      this.closeModal('registerModal');
+      this.showToast('💾 상담 정보가 보류 상태로 안전하게 저장되었습니다.');
+      this.renderConsultations();
+      this.updateBadges();
+      return; // 학생 등록(addStudent) 단계로 넘어가지 않음
+    }
 
-    // 2. 모달 닫기 및 UI 갱신 (사용자 경험 우선)
+    // 등록 완료인 경우에만 학생 데이터 생성
+    const newStudent = await Store.addStudent(studentData);
+    await Store.updateConsultation(consultId, { status: '등록완료', consultNote: studentData.consultNote });
+
+    // 2. 모달 닫기 및 UI 갱신
     this.closeModal('registerModal');
-    this.showToast(this.currentRegType === '보류' ? '💾 상담 정보가 보류로 저장되었습니다.' : '🎉 학생 등록 완료! 첫 수업 일정이 캘린더에 추가되었습니다.');
+    this.showToast('🎉 학생 등록 완료! 첫 수업 일정이 캘린더에 추가되었습니다.');
     this.renderConsultations();
     this.renderStudents();
     this.updateBadges();
 
-    // 3. 구글 캘린더 자동 팝업 (등록일 때만 실행)
-    if (newStudent && this.currentRegType === '등록') {
+    // 3. 구글 캘린더 자동 팝업 (등록완료일 때만 실행)
+    if (newStudent) {
       const calUrl = this._buildFirstClassCalendarUrl(newStudent);
-      // 브라우저 팝업 차단 방지를 위해 약간의 지연 후 실행
       setTimeout(() => {
         window.open(calUrl, 'GoogleCalendar', 'width=1000,height=850,scrollbars=yes,resizable=yes');
       }, 100);
