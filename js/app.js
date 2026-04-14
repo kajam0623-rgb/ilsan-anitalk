@@ -599,17 +599,20 @@ const App = {
     const firstDate = document.getElementById('regFirstDate').value;
     const time = document.getElementById('regTime').value;
 
-    if (selectedDays.length === 0) {
-      this.showToast('수업 요일을 선택해 주세요.', 'error');
-      return;
-    }
-    if (!firstDate) {
-      this.showToast('첫 수업일을 입력해 주세요.', 'error');
-      return;
-    }
-    if (!time) {
-      this.showToast('수업 시간을 입력해 주세요.', 'error');
-      return;
+    // '등록'일 때만 필수 항목 검사 수행
+    if (this.currentRegType === '등록') {
+      if (selectedDays.length === 0) {
+        this.showToast('수업 요일을 선택해 주세요.', 'error');
+        return;
+      }
+      if (!firstDate) {
+        this.showToast('첫 수업일을 입력해 주세요.', 'error');
+        return;
+      }
+      if (!time) {
+        this.showToast('수업 시간을 입력해 주세요.', 'error');
+        return;
+      }
     }
 
     const regName = document.getElementById('regName').value.trim();
